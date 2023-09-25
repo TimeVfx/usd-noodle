@@ -15,23 +15,23 @@ import platform
 from Qt import QtCore, QtWidgets, QtGui
 from pxr import Usd, Sdf, Ar, UsdUtils, Tf
 
-import utils
-from vendor.Nodz import nodz_main
-import text_view
-import info_panel
+from . import utils, text_view, info_panel
+from .vendor.Nodz import nodz_main
 
 import re
 from pprint import pprint
 
 
 digitSearch = re.compile(r'\b\d+\b')
-
 logger = logging.getLogger('usd-noodle')
 logger.setLevel(logging.INFO)
 if not len(logger.handlers):
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
+    # fh = logging.FileHandler('/tmp/usd-noodle/test.log')
+    # fh.setLevel(logging.DEBUG)
     logger.addHandler(ch)
+    # logger.addHandler(fh)
 logger.propagate = False
 
 
@@ -109,6 +109,10 @@ class DependencyWalker(object):
     
     
     def resolve(self, layer, path):
+        stage = Usd.Stage.Open(layer)
+        if stage:
+            resolved_path = stage.ResolveIdentifierToEditTarget(path)
+            return resolved_path
         resolved = self.resolver.Resolve(path)
         if resolved:
             return resolved.GetPathString()
@@ -318,7 +322,8 @@ class DependencyWalker(object):
                         # so variants can host payloads and references
                         # we get to these through the variants primspec
                         # and then add them to our list of paths to inspect
-                        
+                        if variant_name != info.get('current_variant'):
+                            continue
                         for primspec_child in self.get_flat_child_list(variant.primSpec):
                             
                             for payload in self.flatten_ref_list(primspec_child.payloadList):
